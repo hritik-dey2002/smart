@@ -33,7 +33,7 @@ cryptography==42.0.8
 cycler==0.12.1
 cymem==2.0.8
 distro==1.9.0
-dlib @ file:///C:/Users/hriti/OneDrive/Desktop/dlib_compiled/dlib-19.22.99-cp39-cp39-win_amd64.whl#sha256=c73bdd0c215829109cd36936a855e2af84e7f8cf12168dbe4e08c93e1f3f1274
+dlib
 dnspython==2.3.0
 docx2txt==0.8
 en_core_web_lg @ https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-2.3.1/en_core_web_lg-2.3.1.tar.gz#sha256=978be907fecfb9c1ab60a80a70fbc51a4ad62db91ebd672c3165f89640f05b4e
