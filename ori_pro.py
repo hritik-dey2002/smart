@@ -19,101 +19,148 @@ from PIL import Image
 import pymysql
 # from Courses import ds_course, web_course, android_course, ios_course, uiux_course, resume_videos, interview_videos
 import plotly.express as px
-import youtube_dl
 
 
 
-def get_table_download_link(df, filename, text):
-    """Generates a link allowing the data in a given panda dataframe to be downloaded
-    in:  dataframe
-    out: href string
-    """
-    csv = df.to_csv(index=False)
-    b64 = base64.b64encode(csv.encode()).decode()  # some strings <-> bytes conversions necessary here
-    # href = f'<a href="data:file/csv;base64,{b64}">Download Report</a>'
-    href = f'<a href="data:file/csv;base64,{b64}" download="{filename}">{text}</a>'
-    return href
+def send_email(to_email, subject, message):
+    try:
+        # Define the sender's email and password
+        sender_email = "smarthiringsystem2024@gmail.com"    # "20hritikdey@gmail.com"
+        sender_password = "ngpx aerc otlw vxxj"  # Store this securely in practice "ewfb zfri yufy mzfv"
+        
+        # Setup the MIME
+        msg = MIMEMultipart()
+        msg['From'] = sender_email
+        msg['To'] = to_email
+        msg['Subject'] = subject
+
+        # Add body to email
+        msg.attach(MIMEText(message, 'plain'))
+
+        # Create server object with Gmail's SMTP server details
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()  # Enable security
+        server.login(sender_email, sender_password)
+
+        # Send email
+        text = msg.as_string()
+        server.sendmail(sender_email, to_email, text)
+
+        # Close the server connection
+        server.quit()
+
+    except Exception as e:
+        print(f'Error sending email: {e}')
 
 
-def pdf_reader(file):
-    resource_manager = PDFResourceManager()
-    fake_file_handle = io.StringIO()
-    converter = TextConverter(resource_manager, fake_file_handle, laparams=LAParams())
-    page_interpreter = PDFPageInterpreter(resource_manager, converter)
-    with open(file, 'rb') as fh:
-        for page in PDFPage.get_pages(fh,
-                                      caching=True,
-                                      check_extractable=True):
-            page_interpreter.process_page(page)
-            print(page)
-        text = fake_file_handle.getvalue()
 
-    # close open handles
-    converter.close()
-    fake_file_handle.close()
-    return text
+page_bg_img = f"""
+<style>
+[data-testid="stAppViewContainer"] > .main {{
+background-image: url("https://i.imghippo.com/files/5UcL11724915435.png");
 
+background-position: center center;
 
-def show_pdf(file_path):
-    with open(file_path, "rb") as f:
-        base64_pdf = base64.b64encode(f.read()).decode('utf-8')
-    # pdf_display = f'<embed src="data:application/pdf;base64,{base64_pdf}" width="700" height="1000" type="application/pdf">'
-    pdf_display = F'<iframe src="data:application/pdf;base64,{base64_pdf}" width="700" height="1000" type="application/pdf"></iframe>'
-    st.markdown(pdf_display, unsafe_allow_html=True)
+/* Make image fixed */
+background-attachment: fixed;
+
+/* Not repeat images */
+background-repeat: no-repeat;
+
+/* Set background size auto */
+background-size: 100%;
+}}
 
 
-def course_recommender(course_list):
-    st.subheader("**Courses & Certificates🎓 Recommendations**")
-    c = 0
-    rec_course = []
-    no_of_reco = st.slider('Choose Number of Course Recommendations:', 1, 10, 4)
-    random.shuffle(course_list)
-    for c_name, c_link in course_list:
-        c += 1
-        st.markdown(f"({c}) [{c_name}]({c_link})")
-        rec_course.append(c_name)
-        if c == no_of_reco:
-            break
-    return rec_course
+
+[data-testid="stHeader"] {{
+background: rgba(0,0,0,0);
+}}
+
+</style>
+"""
+
+st.markdown(page_bg_img, unsafe_allow_html=True)
 
 
-connection = pymysql.connect(host='localhost', user='root', password='')
+# connection = pymysql.connect(host='localhost', user='root', password='')
+connection = mysql.connector.connect(host='sql12.freesqldatabase.com', user='sql12763883', password='UbNkeHVXWh',database='sql12763883')
 cursor = connection.cursor()
 
-
-def insert_data(name, email, res_score, timestamp, no_of_pages, reco_field, cand_level, skills, recommended_skills,
-                courses):
+def insert_data(name, email, timestamp, exp, skills,count,Resume):
     DB_table_name = 'user_data'
     insert_sql = "insert into " + DB_table_name + """
-    values (0,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
-    rec_values = (
-    name, email, str(res_score), timestamp, str(no_of_pages), reco_field, cand_level, skills, recommended_skills,
-    courses)
+    values (0,%s,%s,%s,%s,%s,%s,%s)"""
+    rec_values = (name, email, timestamp, str(exp), skills,count,Resume)
     cursor.execute(insert_sql, rec_values)
     connection.commit()
 
+# def insert_com_data(cid,name,password):
+#     DB_table_name = 'com_data'
+#     insert_sql = "insert into " + DB_table_name + """
+#     values (%s,%s,%s)"""
+#     rec_values = (cid,name,password)
+#     cursor.execute(insert_sql, rec_values)
+#     connection.commit()
 
-st.set_page_config(
-    page_title="Smart Resume Analyzer",
-    page_icon='./Logo/SRA_Logo.ico',
-)
+def insert_com_data(name, password):
+    DB_table_name = 'com_data'
+    insert_sql = "insert into " + DB_table_name + """
+    (Name, password) values (%s,%s)"""
+    rec_values = (name, password)
+    cursor.execute(insert_sql, rec_values)
+    connection.commit()
+    return cursor.lastrowid  # Return the auto-generated cid
 
+
+def insert_recruit_data(cid,domain,reco_skill,timestamp,experience):
+    DB_table_name = 'recruit_data'
+    insert_sql = "insert into " + DB_table_name + """
+    values (0,%s,%s,%s,%s,%s)"""
+    rec_values = (cid,domain,reco_skill,timestamp,experience)
+    cursor.execute(insert_sql, rec_values)
+    connection.commit()
+
+def fetch_previous_recruitments(cid):
+    query = "SELECT * FROM recruit_data WHERE cid = %s"
+    cursor.execute(query, (cid,))
+    return cursor.fetchall()
+
+# def delete_data(email):
+#     DB_table_name = 'user_data12'
+#     delete_sql = f"DELETE FROM {DB_table_name} WHERE email_id = %s"
+#     cursor.execute(delete_sql, (email,))
+#     connection.commit()
+def update_data(email, a,b,c,d):
+    DB_table_name = 'user_data'
+    update_sql = f"UPDATE {DB_table_name} SET timestamp = %s, experience = %s, actual_skills = %s, resume = %s WHERE email_id = %s"
+    cursor.execute(update_sql, (a,b,c,d, email))
+    connection.commit()
+
+# def fetch_resume(email):
+#     query = "SELECT Resume FROM user_data12 WHERE Email_ID = %s"
+#     cursor.execute(query, (email,))
+#     return cursor.fetchone()
 
 def run():
-    st.title("Smart Resume Analyser")
-    st.sidebar.markdown("# Choose User")
-    activities = ["Normal User", "Admin","Company"]
-    choice = st.sidebar.selectbox("Choose among the given options:", activities)
-    # link = '[©Developed by Spidy20](http://github.com/spidy20)'
-    # st.sidebar.markdown(link, unsafe_allow_html=True)
-    img = Image.open('./Logo/SRA_Logo.jpg')
-    img = img.resize((250, 250))
-    st.image(img)
+
+    original_title ='''<p style="font-size: 50px; font-weight: bold;color: #333; 
+    text-shadow: 
+        1px 1px 0px #eab,  /* Top-left shadow (light) */
+        2px 2px 0px #ccc,  /* Middle-left shadow */
+        3px 3px 0px #999;  /* Bottom-left shadow (dark) */
+    font-family: Times new roman;"><b>SMART HIRING SYSTEM</b></p>'''
+    st.markdown(original_title, unsafe_allow_html=True)
+
+    # st.title(":green[Smart Resume Screening]")
+    st.sidebar.markdown("### **Choose User**")
+    activities = ["User 🧑🏻‍💻", "Admin 👤","Company 🏢"]
+    choice = st.sidebar.selectbox("**Choose among the given options:**", activities)
 
     # Create the DB
-    db_sql = """CREATE DATABASE IF NOT EXISTS SRA;"""
-    cursor.execute(db_sql)
-    connection.select_db("sra")
+    # db_sql = """CREATE DATABASE IF NOT EXISTS SRA3;"""
+    # cursor.execute(db_sql)
+    # connection.select_db("sra4")
 
     # Create table
     DB_table_name = 'user_data'
@@ -121,337 +168,535 @@ def run():
                     (ID INT NOT NULL AUTO_INCREMENT,
                      Name varchar(100) NOT NULL,
                      Email_ID VARCHAR(50) NOT NULL,
-                     resume_score VARCHAR(8) NOT NULL,
                      Timestamp VARCHAR(50) NOT NULL,
-                     Page_no VARCHAR(5) NOT NULL,
-                     Predicted_Field VARCHAR(25) NOT NULL,
-                     User_level VARCHAR(30) NOT NULL,
-                     Actual_skills VARCHAR(300) NOT NULL,
-                     Recommended_skills VARCHAR(300) NOT NULL,
-                     Recommended_courses VARCHAR(600) NOT NULL,
+                     Experience VARCHAR(10) NOT NULL,
+                     Actual_skills VARCHAR(700) NOT NULL,
+                     Count INT(5) NOT NULL,
+                     Resume LONGBLOB NOT NULL,
                      PRIMARY KEY (ID));
                     """
     cursor.execute(table_sql)
-    if choice == 'Normal User':
-        # st.markdown('''<h4 style='text-align: left; color: #d73b5c;'>* Upload your resume, and get smart recommendation based on it."</h4>''',
-        #             unsafe_allow_html=True)
-        pdf_file = st.file_uploader("Choose your Resume", type=["pdf"])
-        if pdf_file is not None:
-            # with st.spinner('Uploading your Resume....'):
-            #     time.sleep(4)
-            save_image_path = './Uploaded_Resumes/' + pdf_file.name
-            with open(save_image_path, "wb") as f:
-                f.write(pdf_file.getbuffer())
-            show_pdf(save_image_path)
-            resume_data = ResumeParser(save_image_path).get_extracted_data()
-            if resume_data:
-                ## Get the whole resume data
-                resume_text = pdf_reader(save_image_path)
 
-                st.header("**Resume Analysis**")
-                st.success("Hello " + resume_data['name'])
-                st.subheader("**Your Basic info**")
-                try:
-                    st.text('Name: ' + resume_data['name'])
-                    st.text('Email: ' + resume_data['email'])
-                    st.text('Contact: ' + resume_data['mobile_number'])
-                    st.text('Resume pages: ' + str(resume_data['no_of_pages']))
-                except:
-                    pass
-                cand_level = ''
-                if resume_data['no_of_pages'] == 1:
-                    cand_level = "Fresher"
-                    st.markdown('''<h4 style='text-align: left; color: #d73b5c;'>You are looking Fresher.</h4>''',
-                                unsafe_allow_html=True)
-                elif resume_data['no_of_pages'] == 2:
-                    cand_level = "Intermediate"
-                    st.markdown('''<h4 style='text-align: left; color: #1ed760;'>You are at intermediate level!</h4>''',
-                                unsafe_allow_html=True)
-                elif resume_data['no_of_pages'] >= 3:
-                    cand_level = "Experienced"
-                    st.markdown('''<h4 style='text-align: left; color: #fba171;'>You are at experience level!''',
-                                unsafe_allow_html=True)
-
-                st.subheader("**Skills Recommendation💡**")
-                ## Skill shows
-                keywords = st_tags(label='### Skills that you have',
-                                   text='See our skills recommendation',
-                                   value=resume_data['skills'], key='1')
-
-                ##  recommendation
-                ds_keyword = ['tensorflow', 'keras', 'pytorch', 'machine learning', 'deep Learning', 'flask',
-                              'streamlit']
-                web_keyword = ['react', 'django', 'node jS', 'react js', 'php', 'laravel', 'magento', 'wordpress',
-                               'javascript', 'angular js', 'c#', 'flask']
-                android_keyword = ['android', 'android development', 'flutter', 'kotlin', 'xml', 'kivy']
-                ios_keyword = ['ios', 'ios development', 'swift', 'cocoa', 'cocoa touch', 'xcode']
-                uiux_keyword = ['ux', 'adobe xd', 'figma', 'zeplin', 'balsamiq', 'ui', 'prototyping', 'wireframes',
-                                'storyframes', 'adobe photoshop', 'photoshop', 'editing', 'adobe illustrator',
-                                'illustrator', 'adobe after effects', 'after effects', 'adobe premier pro',
-                                'premier pro', 'adobe indesign', 'indesign', 'wireframe', 'solid', 'grasp',
-                                'user research', 'user experience']
-
-                recommended_skills = []
-                reco_field = ''
-                rec_course = ''
-                ## Courses recommendation
-                for i in resume_data['skills']:
-                    ## Data science recommendation
-                    if i.lower() in ds_keyword:
-                        print(i.lower())
-                        reco_field = 'Data Science'
-                        st.success("** Our analysis says you are looking for Data Science Jobs.**")
-                        recommended_skills = ['Data Visualization', 'Predictive Analysis', 'Statistical Modeling',
-                                              'Data Mining', 'Clustering & Classification', 'Data Analytics',
-                                              'Quantitative Analysis', 'Web Scraping', 'ML Algorithms', 'Keras',
-                                              'Pytorch', 'Probability', 'Scikit-learn', 'Tensorflow', "Flask",
-                                              'Streamlit']
-                        recommended_keywords = st_tags(label='### Recommended skills for you.',
-                                                       text='Recommended skills generated from System',
-                                                       value=recommended_skills, key='2')
-                        st.markdown(
-                            '''<h4 style='text-align: left; color: #1ed760;'>Adding this skills to resume will boost🚀 the chances of getting a Job💼</h4>''',
-                            unsafe_allow_html=True)
-                        rec_course = course_recommender(ds_course)
-                        break
-
-                    ## Web development recommendation
-                    elif i.lower() in web_keyword:
-                        print(i.lower())
-                        reco_field = 'Web Development'
-                        st.success("** Our analysis says you are looking for Web Development Jobs **")
-                        recommended_skills = ['React', 'Django', 'Node JS', 'React JS', 'php', 'laravel', 'Magento',
-                                              'wordpress', 'Javascript', 'Angular JS', 'c#', 'Flask', 'SDK']
-                        recommended_keywords = st_tags(label='### Recommended skills for you.',
-                                                       text='Recommended skills generated from System',
-                                                       value=recommended_skills, key='3')
-                        st.markdown(
-                            '''<h4 style='text-align: left; color: #1ed760;'>Adding this skills to resume will boost🚀 the chances of getting a Job💼</h4>''',
-                            unsafe_allow_html=True)
-                        rec_course = course_recommender(web_course)
-                        break
-
-                    ## Android App Development
-                    elif i.lower() in android_keyword:
-                        print(i.lower())
-                        reco_field = 'Android Development'
-                        st.success("** Our analysis says you are looking for Android App Development Jobs **")
-                        recommended_skills = ['Android', 'Android development', 'Flutter', 'Kotlin', 'XML', 'Java',
-                                              'Kivy', 'GIT', 'SDK', 'SQLite']
-                        recommended_keywords = st_tags(label='### Recommended skills for you.',
-                                                       text='Recommended skills generated from System',
-                                                       value=recommended_skills, key='4')
-                        st.markdown(
-                            '''<h4 style='text-align: left; color: #1ed760;'>Adding this skills to resume will boost🚀 the chances of getting a Job💼</h4>''',
-                            unsafe_allow_html=True)
-                        rec_course = course_recommender(android_course)
-                        break
-
-                    ## IOS App Development
-                    elif i.lower() in ios_keyword:
-                        print(i.lower())
-                        reco_field = 'IOS Development'
-                        st.success("** Our analysis says you are looking for IOS App Development Jobs **")
-                        recommended_skills = ['IOS', 'IOS Development', 'Swift', 'Cocoa', 'Cocoa Touch', 'Xcode',
-                                              'Objective-C', 'SQLite', 'Plist', 'StoreKit', "UI-Kit", 'AV Foundation',
-                                              'Auto-Layout']
-                        recommended_keywords = st_tags(label='### Recommended skills for you.',
-                                                       text='Recommended skills generated from System',
-                                                       value=recommended_skills, key='5')
-                        st.markdown(
-                            '''<h4 style='text-align: left; color: #1ed760;'>Adding this skills to resume will boost🚀 the chances of getting a Job💼</h4>''',
-                            unsafe_allow_html=True)
-                        rec_course = course_recommender(ios_course)
-                        break
-
-                    ## Ui-UX Recommendation
-                    elif i.lower() in uiux_keyword:
-                        print(i.lower())
-                        reco_field = 'UI-UX Development'
-                        st.success("** Our analysis says you are looking for UI-UX Development Jobs **")
-                        recommended_skills = ['UI', 'User Experience', 'Adobe XD', 'Figma', 'Zeplin', 'Balsamiq',
-                                              'Prototyping', 'Wireframes', 'Storyframes', 'Adobe Photoshop', 'Editing',
-                                              'Illustrator', 'After Effects', 'Premier Pro', 'Indesign', 'Wireframe',
-                                              'Solid', 'Grasp', 'User Research']
-                        recommended_keywords = st_tags(label='### Recommended skills for you.',
-                                                       text='Recommended skills generated from System',
-                                                       value=recommended_skills, key='6')
-                        st.markdown(
-                            '''<h4 style='text-align: left; color: #1ed760;'>Adding this skills to resume will boost🚀 the chances of getting a Job💼</h4>''',
-                            unsafe_allow_html=True)
-                        rec_course = course_recommender(uiux_course)
-                        break
-
-                #
-                ## Insert into table
-                ts = time.time()
-                cur_date = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
-                cur_time = datetime.datetime.fromtimestamp(ts).strftime('%H:%M:%S')
-                timestamp = str(cur_date + '_' + cur_time)
-
-                ### Resume writing recommendation
-                st.subheader("**Resume Tips & Ideas💡**")
-                resume_score = 0
-                if 'Objective' in resume_text:
-                    resume_score = resume_score + 20
-                    st.markdown(
-                        '''<h4 style='text-align: left; color: #1ed760;'>[+] Awesome! You have added Objective</h4>''',
-                        unsafe_allow_html=True)
-                else:
-                    st.markdown(
-                        '''<h4 style='text-align: left; color: #fabc10;'>[-] According to our recommendation please add your career objective, it will give your career intension to the Recruiters.</h4>''',
-                        unsafe_allow_html=True)
-
-                if 'Declaration' in resume_text:
-                    resume_score = resume_score + 20
-                    st.markdown(
-                        '''<h4 style='text-align: left; color: #1ed760;'>[+] Awesome! You have added Delcaration✍/h4>''',
-                        unsafe_allow_html=True)
-                else:
-                    st.markdown(
-                        '''<h4 style='text-align: left; color: #fabc10;'>[-] According to our recommendation please add Declaration✍. It will give the assurance that everything written on your resume is true and fully acknowledged by you</h4>''',
-                        unsafe_allow_html=True)
-
-                if 'Hobbies' or 'Interests' in resume_text:
-                    resume_score = resume_score + 20
-                    st.markdown(
-                        '''<h4 style='text-align: left; color: #1ed760;'>[+] Awesome! You have added your Hobbies⚽</h4>''',
-                        unsafe_allow_html=True)
-                else:
-                    st.markdown(
-                        '''<h4 style='text-align: left; color: #fabc10;'>[-] According to our recommendation please add Hobbies⚽. It will show your persnality to the Recruiters and give the assurance that you are fit for this role or not.</h4>''',
-                        unsafe_allow_html=True)
-
-                if 'Achievements' in resume_text:
-                    resume_score = resume_score + 20
-                    st.markdown(
-                        '''<h4 style='text-align: left; color: #1ed760;'>[+] Awesome! You have added your Achievements🏅 </h4>''',
-                        unsafe_allow_html=True)
-                else:
-                    st.markdown(
-                        '''<h4 style='text-align: left; color: #fabc10;'>[-] According to our recommendation please add Achievements🏅. It will show that you are capable for the required position.</h4>''',
-                        unsafe_allow_html=True)
-
-                if 'Projects' in resume_text:
-                    resume_score = resume_score + 20
-                    st.markdown(
-                        '''<h4 style='text-align: left; color: #1ed760;'>[+] Awesome! You have added your Projects👨‍💻 </h4>''',
-                        unsafe_allow_html=True)
-                else:
-                    st.markdown(
-                        '''<h4 style='text-align: left; color: #fabc10;'>[-] According to our recommendation please add Projects👨‍💻. It will show that you have done work related the required position or not.</h4>''',
-                        unsafe_allow_html=True)
-
-                st.subheader("**Resume Score📝**")
-                st.markdown(
-                    """
-                    <style>
-                        .stProgress > div > div > div > div {
-                            background-color: #d73b5c;
-                        }
-                    </style>""",
-                    unsafe_allow_html=True,
-                )
-                my_bar = st.progress(0)
-                score = 0
-                for percent_complete in range(resume_score):
-                    score += 1
-                    time.sleep(0.1)
-                    my_bar.progress(percent_complete + 1)
-                st.success('** Your Resume Writing Score: ' + str(score) + '**')
-                st.warning(
-                    "** Note: This score is calculated based on the content that you have added in your Resume. **")
-                st.balloons()
-
-                insert_data(resume_data['name'], resume_data['email'], str(resume_score), timestamp,
-                            str(resume_data['no_of_pages']), reco_field, cand_level, str(resume_data['skills']),
-                            str(recommended_skills), str(rec_course))
-
-                ## Resume writing video
-                st.header("**Bonus Video for Resume Writing Tips💡**")
-                resume_vid = random.choice(resume_videos)
-                res_vid_title = fetch_yt_video(resume_vid)
-                st.subheader("✅ **" + res_vid_title + "**")
-                st.video(resume_vid)
-
-                ## Interview Preparation Video
-                st.header("**Bonus Video for Interview👨‍💼 Tips💡**")
-                interview_vid = random.choice(interview_videos)
-                int_vid_title = fetch_yt_video(interview_vid)
-                st.subheader("✅ **" + int_vid_title + "**")
-                st.video(interview_vid)
-
-                connection.commit()
-            else:
-                st.error('Something went wrong..')
-    elif choice == 'Admin':
-        ## Admin Side
-        st.success('Welcome to Admin Side')
-        # st.sidebar.subheader('**ID / Password Required!**')
-
-        ad_user = st.text_input("Username")
-        ad_password = st.text_input("Password", type='password')
-        if st.button('Login'):
-            if ad_user == 'machine_learning_hub' and ad_password == 'mlhub123':
-                st.success("Welcome Hritik")
-                # Display Data
-                cursor.execute('''SELECT*FROM user_data''')
-                data = cursor.fetchall()
-                st.header("**User's👨‍💻 Data**")
-                df = pd.DataFrame(data, columns=['ID', 'Name', 'Email', 'Resume Score', 'Timestamp', 'Total Page',
-                                                 'Predicted Field', 'User Level', 'Actual Skills', 'Recommended Skills',
-                                                 'Recommended Course'])
-                st.dataframe(df)
-                st.markdown(get_table_download_link(df, 'User_Data.csv', 'Download Report'), unsafe_allow_html=True)
-                ## Admin Side Data
-                query = 'select * from user_data;'
-                plot_data = pd.read_sql(query, connection)
-
-                ## Pie chart for predicted field recommendations
-                labels = plot_data.Predicted_Field.unique()
-                print(labels)
-                values = plot_data.Predicted_Field.value_counts()
-                print(values)
-                st.subheader("📈 **Pie-Chart for Predicted Field Recommendations**")
-                fig = px.pie(df, values=values, names=labels, title='Predicted Field according to the Skills')
-                st.plotly_chart(fig)
-
-                ### Pie chart for User's👨‍💻 Experienced Level
-                labels = plot_data.User_level.unique()
-                values = plot_data.User_level.value_counts()
-                st.subheader("📈 ** Pie-Chart for User's👨‍💻 Experienced Level**")
-                fig = px.pie(df, values=values, names=labels, title="Pie-Chart📈 for User's👨‍💻 Experienced Level")
-                st.plotly_chart(fig)
-
-
-            else:
-                st.error("Wrong ID & Password Provided")
-    else:
-        ## company Side
-        st.success('Welcome to Admin Side')
-        # st.sidebar.subheader('**ID / Password Required!**')
-
-        ad_user = st.text_input("Username")
-        ad_password = st.text_input("Password", type='password')
-        if st.button('Login'):
-            if ad_user == 'hritik' and ad_password == 'hdey':
-                st.success("Welcome company")
-                #box = st.text_input("input", type="default")
-                # Display Data
-                cursor.execute('''SELECT*FROM user_data''')
-                data = cursor.fetchall()
-                st.header("**User's👨‍💻 Data**")
-                df = pd.DataFrame(data, columns=['ID', 'Name', 'Email', 'Resume Score', 'Timestamp', 'Total Page',
-                                                 'Predicted Field', 'User Level', 'Actual Skills', 'Recommended Skills',
-                                                 'Recommended Course'])
-                st.dataframe(df)
-                st.markdown(get_table_download_link(df, 'User_Data.csv', 'Download Report'), unsafe_allow_html=True)
-                ## Admin Side Data
-                query = 'select * from user_data;'
-                plot_data = pd.read_sql(query, connection)
+    if choice == 'User 🧑🏻‍💻':
 
         
+            original_title1 ='''<p style="font-size: 18px; border: 1px double #ed3939;border-radius: 10px; padding: 10px; display: inline-block; background-color: #fdcab82f;
+            box-shadow: 
+        5px 5px 0px #eab, /* Shadow to simulate depth */
+        8px 8px 15px #999;"><i><b>Welcome to User Side<i></b></p>'''
+            st.markdown(original_title1, unsafe_allow_html=True)
+            
+
+            try:
+                pdf_file = st.file_uploader("**Choose your Resume**", type=["pdf"])
+                if st.button("Submit Resume", type="primary"):
+                    if pdf_file is not None:
+                        # save_image_path = './Uploaded_Resumes/' + pdf_file.name
+                        # with open(save_image_path, "wb") as f:
+                        #     f.write(pdf_file.getbuffer())
+                        resume_binary = pdf_file.read()  # Read the PDF file content
+                        resume_data = ResumeParser(pdf_file).get_extracted_data()
+                        # data2 = resumeparse.read_file(save_image_path)
+                        # text = extract_text(save_image_path)
+                        # st.text(text)
+                        if resume_data:
+                            with st.spinner('Wait for it...'):
+                                time.sleep(2)
+                            try:
+                                st.subheader("**Resume Analysis:**")
+                                st.success("**_Congratulations " + resume_data['name'] + ' 🎉. Your Resume has been Submitted._**')
+                                
+                                st.subheader("**Candidates Basic Information:**")
+                                st.text('Name: ' + resume_data['name'])
+                                st.text('Email: ' + resume_data['email'])
+                                # st.text('Resume pages: ' + str(resume_data['no_of_pages']))
+                                st.text('Experience: ' + str(resume_data['total_experience']))
+                                # raise ValueError("There is an error parsing the resume")
+                            except ValueError:
+                                st.error("**⚠ An unexpected ERROR occurred during resume processing.**")
+                            # except Exception as e:
+                            #     st.error("An unexpected error occurred during resume processing.")
+
+                            ts = time.time()
+                            cur_date = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
+                            cur_time = datetime.datetime.fromtimestamp(ts).strftime('%H:%M:%S')
+                            timestamp = str(cur_date + '_' + cur_time)
+
+                            st.balloons()
+
+                            # delete_data(resume_data['email'])
+
+                            sql = "SELECT email_id FROM user_data"
+                            cursor.execute(sql)
+                            result = cursor.fetchall()
+                            # print(result)
+                            email_list = [email[0] for email in result]
+                            a=resume_data['email']
+                            if a in email_list:
+                                update_data(resume_data['email'], timestamp,
+                                str(resume_data['total_experience']), str(resume_data['skills']),resume_binary)
+                            # delete_data(resume_data['email'])
+                            else:
+                                insert_data(resume_data['name'], resume_data['email'], timestamp,
+                                    str(resume_data['total_experience']), str(resume_data['skills']),0,resume_binary)
+
+                            connection.commit()
+
+                        else:
+                            st.error("**:red[⚠ sometimes went wrong.....]**")
+                    else:
+                        st.warning('**:red[⚠ Warning message]**')
+                        st.error("**_:red[Please Upload Your Resume]_**")
+            except Exception:
+                st.error("**⚠ An unexpected ERROR occurred during resume processing.**")
 
 
+    elif choice=='Admin 👤':
+        try:
+            original_title1 ='''<p style="font-size: 18px; border: 1px double #ed3939;border-radius: 10px; padding: 10px; display: inline-block; background-color: #fdcab82f;
+            box-shadow: 
+        5px 5px 0px #eab, /* Shadow to simulate depth */
+        8px 8px 15px #999;"><i><b>Welcome to Admin Side<i></b></p>'''
+            st.markdown(original_title1, unsafe_allow_html=True)
+
+            # st.header(":blue[Welcome to Admin Side]")
+            admin_user=st.text_input("**:orange[Username]**")
+            admin_password=st.text_input("**:orange[Password]**",type='password')
+            loadnow11=st.button("login",type="primary")
+            #initialize session state
+            if "loadnow11_state" not in st.session_state:
+                st.session_state.loadnow11_state= False
+            if loadnow11 or st.session_state.loadnow11_state:
+                st.session_state.loadnow11_state=True
+                with st.spinner(':blue[Wait for it...]'):
+                    time.sleep(2)
+                if admin_user=='admin' and admin_password=='admin123':
+                    st.success("##### **_:blue[Welcome Admin]_**")
+
+                    cursor.execute('''SELECT ID,Name,Email_ID,Timestamp,Experience,Actual_skills FROM user_data''')
+                    data = cursor.fetchall()
+                    st.header("**User's Data**")
+                    df = pd.DataFrame(data, columns=['ID', 'Name', 'Email', 'Timestamp', 'Experience', 'Actual Skills'])
+                    # df_filtered = df.drop(columns=['Count'])
+                    st.dataframe(df)
+
+                    cursor.execute('''SELECT*FROM com_data''')
+                    data1 = cursor.fetchall()
+                    st.header("**Company's Data**")
+                    df = pd.DataFrame(data1, columns=['CID', 'CName', 'Password'])
+                    st.dataframe(df)
+
+                    c_id=st.text_input("**Enter Company ID for Show company's Previous Posts:**")
+                    loadnow1=st.button("Show Previous Posts",type="primary")
+                    #initialize session state
+                    if "loadnow1_state" not in st.session_state:
+                        st.session_state.loadnow1_state= False
+                    if loadnow1 or st.session_state.loadnow1_state:
+                        st.session_state.loadnow1_state=True
+                        if c_id.isdigit():
+                            c_id=int(c_id)
+                            cursor.execute(f"SELECT * FROM com_data WHERE cid = %s", (c_id,))
+                            company_exists1 = cursor.fetchone()
+                            if company_exists1:
+                                st.subheader(f"Previous recruitments for {c_id}:")
+                                recruitments = fetch_previous_recruitments(c_id)
+                                if recruitments:
+                                    # st.success(f"Previous recruitments for {c_id}:")
+                                    recruit_df = pd.DataFrame(recruitments, columns=['RID', 'CID', 'Domain', 'Reco_Skills', 'Timestamp', 'Experience'])
+                                    st.dataframe(recruit_df)
+                                else:
+                                    
+                                    st.info(f"**No previous recruitment posts for {c_id}.**")
+                            else:
+                                st.error("There is no such ID exists.")
+
+                else:
+                    st.error("**_:red[Wrong ID or Password is Provided]_**")
+
+        except Exception as main_error:
+            st.error(f"**⚠ An unexpected error occurred: {main_error}**")
+
+    else:
+        try:
+            original_title1 ='''<p style="font-size: 18px; border: 1px double #ed3939;border-radius: 10px; padding: 10px; display: inline-block; background-color: #fdcab82f;
+            box-shadow: 
+        5px 5px 0px #eab, /* Shadow to simulate depth */
+        8px 8px 15px #999;"><i><b>Welcome to Company Side<i></b></p>'''
+            st.markdown(original_title1, unsafe_allow_html=True)
+
+            activities1 = ["Sign in", "Sign up"]
+            choice1 = st.selectbox("**Choose among the given options:**", activities1)
+            DB_table_name1 = 'com_data'
+            table_sql1 = "CREATE TABLE IF NOT EXISTS " + DB_table_name1 + """
+                        (cid INT NOT NULL AUTO_INCREMENT,
+                        Name varchar(100) NOT NULL UNIQUE,
+                        password VARCHAR(50) NOT NULL,
+                        PRIMARY KEY (cid)) AUTO_INCREMENT=101;
+                        """
+            cursor.execute(table_sql1)
+
+            if choice1=='Sign up':
+                name=st.text_input("**Company_name**")
+                password=st.text_input("**Company_password**")
+
+                if st.button("Create Profile", type="primary"):
+                    # # insert_com_data(cid,name,password)
+                    # new_cid = insert_com_data(name, password)
+                    # st.success(f":blue[Your profile is created. Your company ID is {new_cid}]")
+                    # # connection.commit()
+                    # # st.success(":blue[your profile is created]")
+                    # st.balloons()
+                    
+                    cursor.execute(f"SELECT * FROM {DB_table_name1} WHERE Name = %s", (name,))
+                    company_exists = cursor.fetchone()
+
+                    if company_exists:
+                        st.error(f"**_A company with the name '{name}' already exists. Please use a different name or log in._**")
+                    else:
+                        try:
+                            new_cid = insert_com_data(name, password)
+                            st.success(f"**_:blue[Your profile is created. Your company ID is {new_cid}]_**")
+                            st.balloons()
+                        except Exception as e:
+                            st.error(f"**_An unexpected error occurred: {e}_**")
+
+            else:       
+
+                DB_table_name2 = 'recruit_data'
+                table_sql2 = "CREATE TABLE IF NOT EXISTS " + DB_table_name2 + """
+                        (rid INT NOT NULL AUTO_INCREMENT,
+                        cid INT NOT NULL,
+                        domain varchar(100) NOT NULL,
+                        reco_skill varchar(100) NOT NULL,
+                        timestamp varchar(100) NOT NULL,
+                        experience varchar(100) NOT NULL,
+                        PRIMARY KEY (rid),
+                        FOREIGN KEY(cid) REFERENCES com_data(cid) ON DELETE CASCADE);
+                        """
+                cursor.execute(table_sql2)  
+                connection.commit()
+                
+
+                # st.header(":blue[Welcome to Company Side]")
+                company_user=st.text_input("**:orange[User ID]**")
+                company_password=st.text_input("**:orange[Password]**",type='password')
+
+                load=st.button('Sign in',type="primary")
+                #initialize session state
+                if "load_state" not in st.session_state:
+                    st.session_state.load_state= False
+                if load or st.session_state.load_state:
+                    st.session_state.load_state=True
+
+                    if company_user.isdigit():  # Only proceed if the input is numeric (since cid is INT)
+                        company_user = int(company_user)
+
+                        cursor.execute(f"SELECT * FROM {DB_table_name1} WHERE cid = %s AND password = %s", (company_user, company_password))
+                        result100 = cursor.fetchone()
+                        # cursor.execute(f"SELECT * FROM {DB_table_name1} WHERE password= %s", (company_password,))
+                        # result101 = cursor.fetchall()
+                    
+                    # load=st.button('login')
+                    #     #initialize session state
+                    # if "load_state" not in st.session_state:
+                    #     st.session_state.load_state= False
+                    # if load or st.session_state.load_state:
+                    #     st.session_state.load_state=True
+                        # if company_user=='company' and company_password=='company123':
+                        
+                        if result100:
+                            # db_user=result100[0]
+                            # db_password=result100[2]
+        
+                    
+                            # if company_user==db_user and company_password==db_password:
+
+                                st.success("##### **_:blue[Welcome Company]_**")
+                                # st.success("welcome")
+                                        
+                                activities = ["Web Development", "Python Development", "Java Development", "Data Scientist", "Full Stack Development","Android Development"]     
+                                choice1 = st.selectbox("**Choose Required Domain:**", activities)
+                                # st.write("You Selected:", choice1)
+                                st.subheader("You Selected: " + choice1)
+                                cursor.execute('''SELECT Actual_skills FROM user_data''')
+                                data = cursor.fetchall()
+                                cursor.execute('''SELECT Email_ID FROM user_data''')
+                                data2 = cursor.fetchall()
+                                if choice1=="Web Development":
+                                    options = st.multiselect(
+                                        "Choose the required fields",
+                                        ["JavaScript", "HTML", "CSS","React","PHP","Node.js","Next.js","Express.js"],
+                                        ["HTML"],
+                                    )
+                                    li=options
+                                    l=[]
+                                    for x in data:
+                                        # print(x)
+                                        for y in x:
+                                            converted_list = eval(y)
+                                            c=0
+                                            lowercase_list = [item.lower() for item in converted_list]
+                                            # print("list: ",lowercase_list)
+                                            for i in range(len(li)):
+                                                # print(li[i].lower())
+                                                if li[i].lower() in lowercase_list:
+                                                    c=c+1
+                                            
+                                            l.append(c)
+                                    emails_list = [email[0] for email in data2]
+                                    result = dict(zip(emails_list, l))
+                                    for email, value in result.items():
+                                        # cursor.execute("UPDATE user_data11 SET Count = %s WHERE Email_ID = ?", (value, email))
+                                        delete_sql = f"UPDATE {DB_table_name} SET Count = %s WHERE Email_ID = %s"
+                                        cursor.execute(delete_sql, (value,email,))
+                                        connection.commit()
+                                    # print("You selected:", options)
+                    
+                                elif choice1=="Python Development":
+                                    options = st.multiselect(
+                                        "Choose the required fields",
+                                        ["Python", "Django", "Flask","Tkinter","CherryPy","WEB2PY","FastAPI","TensorFlow"],
+                                        ["Python"],
+                                    )
+                                    li=options
+                                    l=[]
+                                    for x in data:
+                                        # print(x)
+                                        for y in x:
+                                            converted_list = eval(y)
+                                            c=0
+                                            lowercase_list = [item.lower() for item in converted_list]
+                                            # print("list: ",lowercase_list)
+                                            for i in range(len(li)):
+                                                # print(li[i].lower())
+                                                if li[i].lower() in lowercase_list:
+                                                    c=c+1
+                                            l.append(c)
+                                    emails_list = [email[0] for email in data2]
+                                    result = dict(zip(emails_list, l))
+                                    for email, value in result.items():
+                                        # cursor.execute("UPDATE user_data11 SET Count = ? WHERE Email_ID = ?", (value, email))
+                                        delete_sql = f"UPDATE {DB_table_name} SET Count = %s WHERE Email_ID = %s"
+                                        cursor.execute(delete_sql, (value,email,))
+                                        connection.commit()
+                                    # st.write("You selected:", options)
+                    
+                                elif choice1=="Java Development":
+                                    options = st.multiselect(
+                                        "Choose the required fields",
+                                        ["java", "JSP", "Servlet","Spring boot","JavaScript","angular"],
+                                        ["java"],
+                                    )
+                                    li=options
+                                    l=[]
+                                    for x in data:
+                                        # print(x)
+                                        for y in x:
+                                            converted_list = eval(y)
+                                            c=0
+                                            lowercase_list = [item.lower() for item in converted_list]
+                                            # print("list: ",lowercase_list)
+                                            for i in range(len(li)):
+                                                # print(li[i].lower())
+                                                if li[i].lower() in lowercase_list:
+                                                    c=c+1
+                                            l.append(c)
+                                    emails_list = [email[0] for email in data2]
+                                    result = dict(zip(emails_list, l))
+                                    for email, value in result.items():
+                                        # cursor.execute("UPDATE user_data11 SET Count = ? WHERE Email_ID = ?", (value, email))
+                                        delete_sql = f"UPDATE {DB_table_name} SET Count = %s WHERE Email_ID = %s"
+                                        cursor.execute(delete_sql, (value,email,))
+                                        connection.commit()
+                                    # st.write("You selected:", options)
+                                
+                                elif choice1=="Data Scientist":
+                                    options = st.multiselect(
+                                        "Choose the required fields",
+                                        ["Mechine Learning", "Python", "AI","NLP","Deep Learning","Pandas","TensorFlow","Power BI","Pytorch","Excel"],
+                                        ["AI"],
+                                    )
+                                    li=options
+                                    l=[]
+                                    for x in data:
+                                        # print(x)
+                                        for y in x:
+                                            converted_list = eval(y)
+                                            c=0
+                                            lowercase_list = [item.lower() for item in converted_list]
+                                            # print("list: ",lowercase_list)
+                                            for i in range(len(li)):
+                                                # print(li[i].lower())
+                                                if li[i].lower() in lowercase_list:
+                                                    c=c+1
+                                            l.append(c)
+
+                                    emails_list = [email[0] for email in data2]
+                                    result = dict(zip(emails_list, l))
+                                    for email, value in result.items():
+                                        # cursor.execute("UPDATE user_data11 SET Count = ? WHERE Email_ID = ?", (value, email))
+                                        delete_sql = f"UPDATE {DB_table_name} SET Count = %s WHERE Email_ID = %s"
+                                        cursor.execute(delete_sql, (value,email,))
+                                        connection.commit()
+                                    # st.write("You selected:", options)
+
+                                elif choice1=="Full Stack Development":
+                                    options = st.multiselect(
+                                        "Choose the required fields",
+                                        ["Python", "Java", "R", "Ruby", "Node.js", "PHP", "React", "Angular", "Express.js","C++","MongoDB","MySQL","PostgreSQL"],
+                                        ["PHP"],
+                                    )
+                                    li=options
+                                    l=[]
+                                    for x in data:
+                                        # print(x)
+                                        for y in x:
+                                            converted_list = eval(y)
+                                            c=0
+                                            lowercase_list = [item.lower() for item in converted_list]
+                                            # print("list: ",lowercase_list)
+                                            for i in range(len(li)):
+                                                # print(li[i].lower())
+                                                if li[i].lower() in lowercase_list:
+                                                    c=c+1
+                                            l.append(c)
+                                    emails_list = [email[0] for email in data2]
+                                    result = dict(zip(emails_list, l))
+                                    for email, value in result.items():
+                                        # cursor.execute("UPDATE user_data11 SET Count = ? WHERE Email_ID = ?", (value, email))
+                                        delete_sql = f"UPDATE {DB_table_name} SET Count = %s WHERE Email_ID = %s"
+                                        cursor.execute(delete_sql, (value,email,))
+                                        connection.commit()
+
+                                elif choice1=="Android Development":
+                                    options = st.multiselect(
+                                        "Choose the required fields",
+                                        ["Java","Kotlin","Android UI","C++","Python"],
+                                        ["Java"],
+                                    )
+                                    li=options
+                                    l=[]
+                                    for x in data:
+                                        # print(x)
+                                        for y in x:
+                                            converted_list = eval(y)
+                                            c=0
+                                            lowercase_list = [item.lower() for item in converted_list]
+                                            # print("list: ",lowercase_list)
+                                            for i in range(len(li)):
+                                                # print(li[i].lower())
+                                                if li[i].lower() in lowercase_list:
+                                                    c=c+1
+                                            l.append(c)
+
+                                    emails_list = [email[0] for email in data2]
+                                    result = dict(zip(emails_list, l))
+                                    for email, value in result.items():
+                                        # cursor.execute("UPDATE user_data11 SET Count = ? WHERE Email_ID = ?", (value, email))
+                                        delete_sql = f"UPDATE {DB_table_name} SET Count = %s WHERE Email_ID = %s"
+                                        cursor.execute(delete_sql, (value,email,))
+                                        connection.commit()
+
+                                # ts = time.time()
+                                # cur_date = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
+                                # cur_time = datetime.datetime.fromtimestamp(ts).strftime('%H:%M:%S')
+                                # timestamp = str(cur_date + '_' + cur_time)
+                            
+                            # st.balloons()
+                                age = st.slider("**select required experience year?**", 0, 40, 5)
+                                st.subheader("**Experience level set to: **"+ str(age) + "** years**")
+
+                                # d = st.date_input("Select the deadline of posts", value=None)
+                                # st.write("Recruitment deadline is:", d)
+
+                                load1=st.button('Submit new recruitment posts')
+                                #initialize session state
+                                if "load1_state" not in st.session_state:
+                                    st.session_state.load1_state= False
+                                if load1 or st.session_state.load1_state:
+                                    st.session_state.load1_state=True
+                                # if st.button("Submit new recruitment posts", type="primary"):
+                                    ts = time.time()
+                                    cur_date = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
+                                    cur_time = datetime.datetime.fromtimestamp(ts).strftime('%H:%M:%S')
+                                    timestamp = str(cur_date + '_' + cur_time)
+                                    insert_recruit_data(company_user, choice1, ', '.join(options), timestamp, age)
+                                    # cursor.execute(f"SELECT*FROM {DB_table_name} WHERE Experience>=%s ORDER BY Count DESC", (str(exp),))
+                                    # cursor.execute(f"SELECT * FROM {DB_table_name} WHERE Count>=1 and Experience >= %s ORDER BY Count DESC", (age,))
+
+                                    cursor.execute(f"SELECT ID,Name,Email_ID,Experience,Actual_skills,Count FROM {DB_table_name} WHERE Count>=1 and Experience >= %s ORDER BY Count DESC", (age,))
+                                    data10 = cursor.fetchall()
+
+                                    st.header("**User's Basic Data**")
+                                    df1 = pd.DataFrame(data10, columns=['ID', 'Name', 'Email', 'Experience', 'Actual Skills','Matching skills'])        
+                                    st.dataframe(df1)
+                                    # st.balloons()
+
+
+
+                                    cursor.execute(f"SELECT ID,Name,Email_ID FROM {DB_table_name} WHERE Count>=1 and Experience >= %s ORDER BY Count DESC", (age,))
+                                    data = cursor.fetchall()
+                        
+                                    # connection.commit()
+                                    
+                                    columns = [description[0] for description in cursor.description]
+                                    # Convert to pandas DataFrame
+                                    df = pd.DataFrame(data, columns=columns)
+
+                                    st.write("## Candidate's List")
+
+                                    # Iterate over each row in the DataFrame and display in Streamlit columns
+                                    for index, row in df.iterrows():
+                                        cols = st.columns([1, 2, 2, 2])  # Adjust column width ratio as needed
+                                        cols[0].write(row["ID"])
+                                        cols[1].write(row["Name"])
+                                        # cols[2].write(row["Email_ID"])
+                                        
+
+                                        
+
+                                        # Add a direct download button for each file
+                                        # Fetch resume data directly when the button is clicked
+
+                                        cursor.execute("SELECT Resume FROM user_data WHERE Email_ID = %s", (row["Email_ID"],))
+                                        resume_data = cursor.fetchone()
+
+                                        if resume_data and resume_data[0]:  # Check if data exists
+                                            cols[2].download_button(
+                                                label="Download Resume",
+                                                data=resume_data[0],  # Resume binary data
+                                                file_name=f"{row['Name']}_resume.pdf",
+                                                mime="application/pdf"
+                                            )
+                                        
+                                        with cols[3]:
+                                            if st.button(f"Accept {row['Name']}",type="primary"):
+                                                cursor.execute(f"SELECT Name FROM {DB_table_name1} WHERE cid = %s", (company_user,))
+                                                r = cursor.fetchone()
+                                
+                                                subject = f"Congratulations! Your Application Has Been Shortlisted"
+                                                message = f"Dear {row['Name']},\n\nWe are pleased to inform you that your resume has been shortlisted for the position of {choice1} at {r[0].upper()}.\n\nYour skills and qualifications align well with the company requirements. The further process will be managed directly by {r[0].upper()}. They will reach out to you soon regarding the next steps in the selection process.\n\nWishing you the best of luck!\n\nBest regards,\nSmart Hiring System\nsmarthiringsystem2024@gmail.com."
+                                                send_email(row["Email_ID"], subject, message)
+                                                st.success(f"**Acceptance email sent to {row['Name']}**")
+
+
+                                if st.button("View Previous Recruitment Posts"):
+                                    previous_posts = fetch_previous_recruitments(company_user)
+                                
+                                    if previous_posts:
+                                        # delete_expired_posts()
+                                        st.header("**Previous Recruitment Posts**")
+                                        df = pd.DataFrame(previous_posts, columns=['RID', 'CID', 'Domain', 'Recommended Skills', 'Timestamp', 'Experience'])
+                                        st.dataframe(df)
+                                    else:
+                                        st.info("No previous recruitment posts found.")
+
+                        else:
+                            st.error("**_:red[Wrong ID & Password Provided]_**")
+
+        except Exception as main_error:
+            st.error(f"**⚠ An unexpected error occurred: {main_error}**")
 
 run()
+
+
