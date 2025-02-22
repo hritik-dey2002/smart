@@ -18,6 +18,9 @@ from streamlit_tags import st_tags
 from PIL import Image
 import mysql.connector
 import pymysql
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import smtplib
 # from Courses import ds_course, web_course, android_course, ios_course, uiux_course, resume_videos, interview_videos
 import plotly.express as px
 
