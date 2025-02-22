@@ -86,8 +86,7 @@ background: rgba(0,0,0,0);
 st.markdown(page_bg_img, unsafe_allow_html=True)
 
 
-# connection = pymysql.connect(host='localhost', user='root', password='')
-connection = mysql.connector.connect(host='localhost', user='root', password='',database='sra3')
+connection = mysql.connector.connect(host='sql12.freesqldatabase.com', user='sql12763883', password='UbNkeHVXWh',database='sql12763883')
 cursor = connection.cursor()
 
 def insert_data(name, email, timestamp, exp, skills,count,Resume):
