@@ -25,7 +25,6 @@ import smtplib
 import plotly.express as px
 
 
-
 def send_email(to_email, subject, message):
     try:
         # Define the sender's email and password
@@ -88,7 +87,7 @@ st.markdown(page_bg_img, unsafe_allow_html=True)
 
 
 # connection = pymysql.connect(host='localhost', user='root', password='')
-connection = mysql.connector.connect(host='sql12.freesqldatabase.com', user='sql12763883', password='UbNkeHVXWh',database='sql12763883')
+connection = mysql.connector.connect(host='localhost', user='root', password='',database='sra3')
 cursor = connection.cursor()
 
 def insert_data(name, email, timestamp, exp, skills,count,Resume):
@@ -702,5 +701,7 @@ def run():
             st.error(f"**⚠ An unexpected error occurred: {main_error}**")
 
 run()
+
+
 
 
